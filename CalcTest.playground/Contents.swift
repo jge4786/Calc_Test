@@ -301,30 +301,40 @@ func protocolEval(lhs: any OperandBase, op: String, rhs: any OperandBase) -> any
 //MARK: - 1번. 함수의 정의
 func protocolCalc(_ sum: any OperandBase, _ cursor: Int, _ depth: Int) -> any OperandBase {
     //MARK: - 2번. 함수의 종료 조건
+    // 다음 인덱스가 없거나, 입력 순서가 잘못됐을 경우 리턴
     guard protocolFormular.count > cursor + 1, let currentOperator: Operator? = protocolFormular[cursor + 1] as? Operator  else {
         return sum
     }
+    
+    // 재귀가 1번 이상 진행됐을 때, 현재 연산자가 * 혹은 / 가 아닐 경우 리턴
     if depth > 0 && !isHigherPrecedence( currentOperator?.value ) {
         return sum
     }
     
+    // 이번 연산에서 사용될 피연산자
     var currentOperand: (any OperandBase)? = protocolFormular[cursor + 2] as? any OperandBase
     var ret = sum
     
     //MARK: - 3번. 재귀 조건
+    // 다음 연산이 남아있고 (cursor + 3), 다음 연산자가 * 혹은 / 일경우 재귀 호출
     if cursor + 3 < protocolFormular.count && isHigherPrecedence( (protocolFormular[cursor + 3] as? Operator)?.value ) {
         guard let res: Double? = currentOperand?.value else {
             return sum
         }
+        
+        // 현재 연산자가 * 혹은 / 일 경우 연산 먼저한 뒤, 커서를 이동하지 않고 재귀 호출
+        // /와 *가 연달아 있는 상황에서, /가 * 보다 앞에 있을 경우, * 를 먼저 연산할 경우 값이 달라지는 문제 때문에 분리
         if isHigherPrecedence(currentOperator?.value) {
             ret = protocolEval(lhs: ret, op: currentOperator?.value ?? "_", rhs: currentOperand ?? Operand(0))
             
+            //사용한 연산 제거
             protocolFormular.remove(at: cursor+1)
             protocolFormular.remove(at: cursor+1)
             
             return protocolCalc(ret, cursor, depth)
         }
 
+        // 현재 연산자가 + 혹은 - 일 경우 커서를 이동한 뒤 재귀 호출
         currentOperand = protocolCalc(res ?? 0, cursor+2, depth+1)
         protocolFormular.remove(at: cursor+3)
         protocolFormular.remove(at: cursor+3)
@@ -332,8 +342,12 @@ func protocolCalc(_ sum: any OperandBase, _ cursor: Int, _ depth: Int) -> any Op
     
     ret = protocolEval(lhs: ret, op: currentOperator?.value ?? "_", rhs: currentOperand ?? Operand(0))
     
+    // 다음 연산 호출
     return protocolCalc(ret, cursor+2, depth)
 }
+
+
+
 
 func calc(_ sum: Double, _ cursor: Int, _ depth: Int) -> Double {
     guard formular.count > cursor + 1, let currentOperator: String? = formular[cursor + 1]  else {
@@ -378,137 +392,3 @@ print(calc(Double(formular[0]) ?? 0, 0, 0))
 
 let protocolCalcResult = protocolCalc(protocolFormular[0] as? any OperandBase ?? Operand(0), 0, 0)
 print(protocolCalcResult.value)
-
-
-/**
- 
- 
- var formular2: [String] {
-     get{
-         var result: [String] = []
-         for dt in list {
-             if dt is Operand {
-                 let nextString: String = String((dt as? Operand)?.value ?? 0)
-                 result.append(nextString)
-             }else if dt is Operator {
-                 let nextString: String = (dt as? Operator)?.value ?? "?"
-                 result.append(nextString)
-             }
-         }
-//            var ret: [String] = list.reduce([""]) {
-//                (result: [String], next: FormularMember) -> [String] in
-//                var tmpResult = result
-//                if next is Operand {
-//                    let nextString: String = String((next as? Operand)?.value ?? 0)
-//                    tmpResult.append(nextString)
-//                }else if next is Operator {
-//                    let nextString: String = (next as? Operator)?.value ?? "?"
-//                    tmpResult.append(nextString)
-//                }
-//
-//                return result
-//            }
-         return result
-     }
- }
- 
- func isHigherPrecedence(_ op: String?) -> Bool {
-     switch op {
-     case "*", "/":
-         return true
-     case _:
-         return false
-     }
- }
- 
- func eval(lhs: String, op: String, rhs: String) -> Double{
-     guard let left = Double(lhs), let right = Double(rhs) else{
-         return 0
-     }
-     
-     switch op {
-     case "+":
-         return left + right
-     case "-":
-         return left - right
-     case "*":
-         return left * right
-     case "/":
-         return left / right
-     case _:
-         return 0
-     }
- }
- 
- class func eval<T: Calculatable>(lhs: T, op: String, rhs: T) -> T {
-     switch op {
-     case "+":
-         guard let leftOp: any Addable = lhs as? any Addable,
-               let rightOp: any Addable = rhs as? any Addable else {
-             return Operand(0) as! T
-         }
-         
-         return (leftOp + rightOp)
-     case "-":
-         guard let leftOp: any Subtractable = lhs as? any Subtractable,
-               let rightOp: any Subtractable = rhs as? any Subtractable else {
-             return Operand(0) as! T
-         }
-         
-         return (leftOp - rightOp)
-     case "*":
-         guard let leftOp: any Multiplicable = lhs as? any Multiplicable,
-               let rightOp: any Multiplicable = rhs as? any Multiplicable else {
-             Operand(0) as! T
-         }
-         
-         return (leftOp * rightOp)
-     case "/":
-         guard let leftOp: any Multiplicable = lhs as? any Multiplicable,
-               let rightOp: any Multiplicable = rhs as? any Multiplicable else {
-             Operand(0) as! T
-         }
-         
-         return (leftOp / rightOp)
-     case _:
-         return lhs + rhs
-     }
- }
- 
- var tmpFormular: [String] = [""]
- func calc(_ sum: Double, _ cursor: Int, _ depth: Int) -> Double {
-     guard tmpFormular.count > cursor + 1, let currentOperator: String? = tmpFormular[cursor + 1]  else {
-         return sum
-     }
-     if depth > 0 && !isHigherPrecedence( currentOperator ) {
-         return sum
-     }
-     
-     var currentOperand: String? = tmpFormular[cursor + 2]
-     var ret = sum
-     
-     if cursor + 3 < tmpFormular.count && isHigherPrecedence( tmpFormular[cursor + 3] ) {
-         guard let res: Double? = Double(currentOperand ?? "0") else {
-             return sum
-         }
-         if isHigherPrecedence(currentOperator) {
-             ret = eval(lhs: String(ret ?? 0.0), op: currentOperator ?? "_", rhs: currentOperand ?? "0")
-             
-             tmpFormular.remove(at: cursor+1)
-             tmpFormular.remove(at: cursor+1)
-             
-             return calc(ret, cursor, depth)
-         }
-
-         currentOperand = String(calc(res ?? 0, cursor+2, depth+1))
-         tmpFormular.remove(at: cursor+3)
-         tmpFormular.remove(at: cursor+3)
-     }
-     
-     ret = eval(lhs: String(ret), op: currentOperator ?? "_", rhs: currentOperand ?? "0")
-     
-     return calc(ret, cursor+2, depth)
- }
- 
- 
- */
