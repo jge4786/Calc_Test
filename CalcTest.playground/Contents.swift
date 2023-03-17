@@ -297,7 +297,7 @@ func protocolEval(lhs: any OperandBase, op: String, rhs: any OperandBase) -> any
         return Operand(0)
     }
 }
-
+// https://lacy-catsup-8c1.notion.site/ba29a9b6f3de40739f829fd1cb2f4064
 //MARK: - 1번. 함수의 정의
 func protocolCalc(_ sum: any OperandBase, _ cursor: Int, _ depth: Int) -> any OperandBase {
     //MARK: - 2번. 함수의 종료 조건
